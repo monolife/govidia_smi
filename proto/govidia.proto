@@ -1,0 +1,33 @@
+syntax = "proto3";
+
+package ducao.govidia_smi;
+
+message DataCue{
+  int32 gpuIndex = 1; // uuidv4 for file, -1 for not set
+}
+
+message GpuInfo{
+	string timestamp = 1;
+	int32  gpu_index = 2;
+	string name = 3;
+	string pci_bus_id = 4;
+	string driver_version = 5;
+	string pstate = 6;
+	string pcie_link_gen_max = 7;
+	string pcie_link_gen_current = 8;
+	string temperature_gpu = 9;
+	string utilization_gpu = 10;
+	string utilization_memory = 11;
+	string memory_total = 12;
+	string memory_free = 13;
+	string memory_used = 14;
+}
+
+message NvidiaQueryResponse{
+	string hostname = 1;
+	repeated GpuInfo infos = 2;
+}
+
+service NvidiaQueryService{
+	rpc QueryGpu(DataCue) returns(NvidiaQueryResponse) {}
+}

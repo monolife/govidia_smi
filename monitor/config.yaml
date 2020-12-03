@@ -1,0 +1,3 @@
+# Transcoder (agention) service parameters
+agentHost: "localhost"
+agentPort: 50050
