@@ -1,4 +1,4 @@
-dzyne_nvidia_agent
-dzyne_nvidia_monitor
+amono_nvidia_agent
+amono_nvidia_monitor
 proto/govidia.pb.go
 proto/govidia_grpc.pb.go
