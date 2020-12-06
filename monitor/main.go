@@ -18,6 +18,8 @@ import (
 	pjson "google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/grpc"
 	pb "ducao/govidia_smi/proto"
+
+	"github.com/gorilla/mux"
 )
 
 type Configuration struct{
@@ -62,10 +64,9 @@ func QueryGpus(hostname string)(response *pb.NvidiaQueryResponse, err error){
 }
 
 func handler(w http.ResponseWriter, r *http.Request) {
-    fmt.Fprintf(w, "Hi there, %s!\n\n", r.URL.Path[1:])
-    
-    response, err := QueryGpus(_config.AgentHost)
-    if err != nil {
+  fmt.Fprintf(w, "Hi there, %s!\n\n", r.URL.Path[1:])
+  response, err := QueryGpus(_config.AgentHost)
+  if err != nil {
 		log.Fatal(err)
 	}
 
@@ -75,7 +76,29 @@ func handler(w http.ResponseWriter, r *http.Request) {
 	}
 	jsonByte,err := marshalOpts.Marshal(response)
 
-    fmt.Fprintf(w, "%s\n", string(jsonByte))
+  fmt.Fprintf(w, "%s\n", string(jsonByte))
+}
+
+func handleOne(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	params := mux.Vars(r)
+
+	response, err := QueryGpus(params["host"])
+	if err != nil {
+		log.Println(err)
+		json.NewEncoder(w).Encode(&pb.NvidiaQueryResponse{})
+	}else{
+
+		marshalOpts := pjson.MarshalOptions{
+			Multiline:true,
+			EmitUnpopulated:true,
+		}
+		jsonByte,err := marshalOpts.Marshal(response)
+		// fmt.Fprintf(w, "%s\n", string(jsonByte))
+		json.NewEncoder(w).Encode(response)
+
+	}
+
 }
 
 func main(){
@@ -104,6 +127,10 @@ func main(){
 	// 	log.Fatal(err)
 	// }
 
-	http.HandleFunc("/", handler)
-    log.Fatal(http.ListenAndServe(":8080", nil))
+  router := mux.NewRouter();
+	router.HandleFunc("/", handler)
+  router.HandleFunc("/query", handler).Methods("GET");
+  router.HandleFunc("/query/{host}", handleOne).Methods("GET")
+
+  log.Fatal(http.ListenAndServe(":8080", router))
 }
