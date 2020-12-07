@@ -21,10 +21,13 @@ import (
 )
 
 type Configuration struct{
-	AgentHost 			string 		`yaml:"agentHost"`// gRPC recieving port for Ingest process server
-	AgentPort 			int 		`yaml:"agentPort"`// gRPC recieving port for Ingest process server
+	MonitorUiPort	int			`yaml:"monitorUiPort"`// gRPC recieving port for Ingest process server
+	AgentPort		int			`yaml:"agentPort"`// gRPC recieving port for Ingest process server
+	AgentHosts		[]string 	`yaml:"agentHosts,flow"`// gRPC recieving port for Ingest process server
 }
 var _config = Configuration{}
+
+var _count = 0
 
 //------------------------------------------------------------------------------
 
@@ -39,7 +42,8 @@ func QueryGpus(hostname string)(response *pb.NvidiaQueryResponse, err error){
 		grpc.WithTimeout(5*time.Second),
 	);
 	if err != nil {
-		log.Fatal(err)
+		log.Println(err)
+		return
 	}
 	defer conn.Close()
 	client := pb.NewNvidiaQueryServiceClient(conn)
@@ -52,7 +56,8 @@ func QueryGpus(hostname string)(response *pb.NvidiaQueryResponse, err error){
 	// 				}).Info("Calling Ingest")
 	response, err = client.QueryGpu(ctx, &pb.DataCue{GpuIndex: 0})
 	if err != nil {
-		log.Fatal(err)
+		log.Println(err)
+		return
 	}
 	if( response.Infos[0].GpuIndex == 0){
 		response.Infos[0].GpuIndex = 0;
@@ -62,48 +67,59 @@ func QueryGpus(hostname string)(response *pb.NvidiaQueryResponse, err error){
 }
 
 func handler(w http.ResponseWriter, r *http.Request) {
-    fmt.Fprintf(w, "Hi there, %s!\n\n", r.URL.Path[1:])
+	log.Println(r)
+    fmt.Fprintf(w, "Hi there, %s [%v]!\n\n", r.URL.Path[1:], _count)
     
-    response, err := QueryGpus(_config.AgentHost)
-    if err != nil {
-		log.Fatal(err)
-	}
+    for _,hostname := range _config.AgentHosts{
+	    response, err := QueryGpus(hostname)
+	    if err != nil {
+			log.Println(err)
+	    	fmt.Fprintf(w, "No response from %s\n", hostname)
+			break
+		}
 
-	marshalOpts := pjson.MarshalOptions{
-		Multiline:true,
-		EmitUnpopulated:true,
+		marshalOpts := pjson.MarshalOptions{
+			Multiline:true,
+			EmitUnpopulated:true,
+		}
+		jsonByte,err := marshalOpts.Marshal(response)
+		log.Println(_count)
+		log.Println(string(jsonByte))
+	    fmt.Fprintf(w, "%s\n", string(jsonByte))
+	    _count++
 	}
-	jsonByte,err := marshalOpts.Marshal(response)
-
-    fmt.Fprintf(w, "%s\n", string(jsonByte))
 }
+func doNothing(w http.ResponseWriter, r *http.Request){}
 
 func main(){
 	/*------------------ Load config -------------------------------*/
-	file, err := os.Open("./config.yaml");
+	configName := "./config.yaml"
+	if( len(os.Args) > 1 ){
+		configName = os.Args[1];
+	}
+	file, err := os.Open(configName);
 	defer file.Close();
 	if err != nil {
-		log.Println("!!! Failed to open config file %v (Using defaults) !!!", err)
+		log.Println("!!! Failed to open config file %v (Using hardcoded defaults) !!!", err)
+		_config.MonitorUiPort = 8080;
+		_config.AgentHosts = []string{"localhost"};
 		_config.AgentPort = 1234;
 	} else {
-		decoder := yaml.NewDecoder(file)
-		err = decoder.Decode(&_config)
+		decoder := yaml.NewDecoder(file);
+		err = decoder.Decode(&_config);
 		if err != nil {
-			log.Printf("Failed to decode config: %v", err)
-			return
+			log.Printf("Failed to decode config: %v", err);
+			return;
 		}
 	}
-	log.Println("===========")
-	log.Println("Config is: ")
-	log.Println(_config)
-	log.Println("===========")
+	log.Println("===========");
+	log.Println("Config is: ");
+	log.Println(_config);
+	log.Println("===========");
 	/*------------------(end) Load config --------------------------*/
 
-
-	// if _,err = QueryGpus(_config.AgentHost); err != nil {
-	// 	log.Fatal(err)
-	// }
-
-	http.HandleFunc("/", handler)
-    log.Fatal(http.ListenAndServe(":8080", nil))
+	uiPort := ":"+strconv.Itoa(_config.MonitorUiPort);
+	http.HandleFunc("/", handler);
+	http.HandleFunc("/favicon.ico", doNothing)
+    log.Println(http.ListenAndServe(uiPort, nil));
 }

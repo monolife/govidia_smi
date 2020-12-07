@@ -1,3 +1,6 @@
-# Transcoder (agention) service parameters
-agentHost: "localhost"
+# Monitor parameters
+monitorUiPort: 8080
+
+# Agent service parameters
+agentHosts: ["localhost", "localhost"]
 agentPort: 50050

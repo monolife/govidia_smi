@@ -2,3 +2,7 @@ amono_nvidia_agent
 amono_nvidia_monitor
 proto/govidia.pb.go
 proto/govidia_grpc.pb.go
+govidia_smi.tar.gz
+bin/*
+upload.sh
+test.json
