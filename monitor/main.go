@@ -18,6 +18,8 @@ import (
 	pjson "google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/grpc"
 	pb "ducao/govidia_smi/proto"
+
+	"github.com/gorilla/mux"
 )
 
 type Configuration struct{
@@ -67,6 +69,7 @@ func QueryGpus(hostname string)(response *pb.NvidiaQueryResponse, err error){
 }
 
 func handler(w http.ResponseWriter, r *http.Request) {
+
 	log.Println(r)
     fmt.Fprintf(w, "Hi there, %s [%v]!\n\n", r.URL.Path[1:], _count)
     
@@ -78,6 +81,7 @@ func handler(w http.ResponseWriter, r *http.Request) {
 			break
 		}
 
+
 		marshalOpts := pjson.MarshalOptions{
 			Multiline:true,
 			EmitUnpopulated:true,
@@ -88,6 +92,32 @@ func handler(w http.ResponseWriter, r *http.Request) {
 	    fmt.Fprintf(w, "%s\n", string(jsonByte))
 	    _count++
 	}
+
+	jsonByte,err := marshalOpts.Marshal(response)
+
+  fmt.Fprintf(w, "%s\n", string(jsonByte))
+}
+
+func handleOne(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	params := mux.Vars(r)
+
+	response, err := QueryGpus(params["host"])
+	if err != nil {
+		log.Println(err)
+		json.NewEncoder(w).Encode(&pb.NvidiaQueryResponse{})
+	}else{
+
+		marshalOpts := pjson.MarshalOptions{
+			Multiline:true,
+			EmitUnpopulated:true,
+		}
+		jsonByte,err := marshalOpts.Marshal(response)
+		// fmt.Fprintf(w, "%s\n", string(jsonByte))
+		json.NewEncoder(w).Encode(response)
+
+	}
+
 }
 func doNothing(w http.ResponseWriter, r *http.Request){}
 
@@ -118,8 +148,22 @@ func main(){
 	log.Println("===========");
 	/*------------------(end) Load config --------------------------*/
 
+<<<<<<< HEAD
 	uiPort := ":"+strconv.Itoa(_config.MonitorUiPort);
 	http.HandleFunc("/", handler);
 	http.HandleFunc("/favicon.ico", doNothing)
     log.Println(http.ListenAndServe(uiPort, nil));
+=======
+
+	// if _,err = QueryGpus(_config.AgentHost); err != nil {
+	// 	log.Fatal(err)
+	// }
+
+  router := mux.NewRouter();
+	router.HandleFunc("/", handler)
+  router.HandleFunc("/query", handler).Methods("GET");
+  router.HandleFunc("/query/{host}", handleOne).Methods("GET")
+
+  log.Fatal(http.ListenAndServe(":8080", router))
+>>>>>>> ef9608bbd8162b8654d34dcbbd389a6ce9c75f60
 }
