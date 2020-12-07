@@ -1,5 +1,5 @@
 # Monitor parameters
-monitorUiPort: 8081
+monitorPort: 50040
 
 # Agent service parameters
 agentHosts: ["localhost"]
