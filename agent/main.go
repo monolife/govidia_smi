@@ -152,7 +152,7 @@ func main() {
   }
   log.Println("===========")
   log.Println("Config is: ")
-  log.Println(_config)
+  log.Printf("%+v\n",_config);
   log.Println("===========")
 	/*------------------(end) Load config --------------------------*/
 

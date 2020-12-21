@@ -19,16 +19,15 @@ import (
 	pb "ducao/govidia_smi/proto"
 
 	"github.com/gorilla/mux"
+	"github.com/gorilla/handlers"
 )
 
 type Configuration struct{
 	MonitorPort	int			`yaml:"monitorPort"`// gRPC recieving port for Ingest process server
-	AgentPort		int			`yaml:"agentPort"`// gRPC recieving port for Ingest process server
-	AgentHosts		[]string 	`yaml:"agentHosts,flow"`// gRPC recieving port for Ingest process server
+	AgentPort	int			`yaml:"agentPort"`// gRPC recieving port for Ingest process server
+	AgentHosts	[]string 	`yaml:"agentHosts,flow"`// gRPC recieving port for Ingest process server
 }
 var _config = Configuration{}
-
-var _count = 0
 
 //------------------------------------------------------------------------------
 
@@ -64,15 +63,8 @@ func QueryGpus(hostname string)(response *pb.NvidiaQueryResponse, err error){
 	return;
 }
 
-func setupResponse(w *http.ResponseWriter, req *http.Request) {
-	(*w).Header().Set("Access-Control-Allow-Origin", "*")
-	(*w).Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE")
-	(*w).Header().Set("Access-Control-Allow-Headers", "Accept, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization")
-	(*w).Header().Set("Content-Type", "application/json")
-}
+func queryRound(w http.ResponseWriter, r *http.Request) {
 
-func handler(w http.ResponseWriter, r *http.Request) {
-	setupResponse(&w, r)
 	var resps []*pb.NvidiaQueryResponse
 
 	for _,hostname := range _config.AgentHosts{
@@ -88,8 +80,6 @@ func handler(w http.ResponseWriter, r *http.Request) {
 }
 
 func handleOne(w http.ResponseWriter, r *http.Request) {
-
-	setupResponse(&w, r)
 
 	params := mux.Vars(r)
 	log.Println(params)
@@ -131,21 +121,20 @@ func main(){
 	}
 	log.Println("===========");
 	log.Println("Config is: ");
-	log.Println(_config);
+	log.Printf("%+v\n",_config);
 	log.Println("===========");
 	/*------------------(end) Load config --------------------------*/
 
 	monitorPort := ":"+strconv.Itoa(_config.MonitorPort);
 
-	// if _,err = QueryGpus(_config.AgentHost); err != nil {
-	// 	log.Fatal(err)
-	// }
-
   router := mux.NewRouter();
-	router.HandleFunc("/", handler)
-	router.HandleFunc("/favicon.ico", doNothing)
-  router.HandleFunc("/query", handler).Methods("GET");
-  router.HandleFunc("/query/{host}", handleOne).Methods("GET")
+  router.HandleFunc("/", doNothing)
+  router.HandleFunc("/favicon.ico", doNothing)
+  router.HandleFunc("/query", queryRound).Methods("GET");
+  // router.HandleFunc("/query/{host}", handleOne).Methods("GET")
 
-  log.Fatal(http.ListenAndServe(monitorPort, router))
+  log.Fatal( http.ListenAndServe(monitorPort, 
+		handlers.CORS(handlers.AllowedHeaders([]string{"X-Requested-With", "Content-Type", "Authorization"}), 
+			handlers.AllowedMethods([]string{"GET", "POST", "PUT", "HEAD", "OPTIONS"}), 
+			handlers.AllowedOrigins([]string{"*"}))(router)))
 }

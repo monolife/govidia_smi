@@ -2,5 +2,5 @@
 monitorUiPort: 8080
 
 # Agent service parameters
-agentHosts: ["localhost", "localhost"]
+agentHosts: ["localhost"
 agentPort: 50050

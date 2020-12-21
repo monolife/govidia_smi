@@ -1,6 +1,6 @@
 # Monitor parameters
-monitorPort: 50040
+monitorPort: 40040
 
 # Agent service parameters
-agentHosts: ["localhost"]
-agentPort: 50050
+agentHosts: ["192.168.1.229"]
+agentPort: 40050

@@ -2,6 +2,8 @@ syntax = "proto3";
 
 package ducao.govidia_smi;
 
+option go_package = "../proto;govidia";
+
 message DataCue{
   int32 gpuIndex = 1; // uuidv4 for file, -1 for not set
 }
