@@ -98,6 +98,11 @@ func doNothing(w http.ResponseWriter, r *http.Request){
 	//NO-OP function to deal with things like favicon fetching
 }
 
+
+func getHosts( w http.ResponseWriter, r *http.Request ) {
+	json.NewEncoder(w).Encode(_config.AgentHosts)
+}
+
 func main(){
 	/*------------------ Load config -------------------------------*/
 	configName := "./config.yaml"
@@ -130,8 +135,9 @@ func main(){
   router := mux.NewRouter();
   router.HandleFunc("/", doNothing)
   router.HandleFunc("/favicon.ico", doNothing)
+  router.HandleFunc("/hosts", getHosts).Methods("GET");
   router.HandleFunc("/query", queryRound).Methods("GET");
-  // router.HandleFunc("/query/{host}", handleOne).Methods("GET")
+  router.HandleFunc("/query/{host}", handleOne).Methods("GET")
 
   log.Fatal( http.ListenAndServe(monitorPort, 
 		handlers.CORS(handlers.AllowedHeaders([]string{"X-Requested-With", "Content-Type", "Authorization"}), 
